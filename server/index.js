@@ -93,41 +93,53 @@ pool.on("error", (err) => console.error("PostgreSQL pool error:", err));
 
 app.disable("x-powered-by");
 
-/*
- * CORS
- * ----
- * Railway must answer the browser's OPTIONS preflight itself.
- * Do this explicitly instead of relying only on the cors package, because
- * Railway's edge/proxy can otherwise return a 405 before the browser sees
- * Access-Control-Allow-Origin.
- */
+// =========================
+// CORS - Vercel + Railway
+// =========================
 app.use((req, res, next) => {
-  const origin = String(req.headers.origin || "").replace(/\/$/, "");
+  const origin = req.headers.origin;
 
-  if (origin && isAllowedOrigin(origin)) {
+  // السماح للـ Vercel الحالي والـ Preview deployments
+  if (
+    origin &&
+    (
+      /^https:\/\/hgfh(?:-[a-z0-9-]+)*\.vercel\.app$/i.test(origin) ||
+      origin === "http://localhost:5173" ||
+      origin === "http://localhost:3000"
+    )
+  ) {
     res.setHeader("Access-Control-Allow-Origin", origin);
     res.setHeader("Access-Control-Allow-Credentials", "true");
     res.setHeader(
       "Access-Control-Allow-Methods",
-      "GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS"
+      "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS"
     );
     res.setHeader(
       "Access-Control-Allow-Headers",
-      "Content-Type, Authorization, X-Requested-With, Accept"
+      "Content-Type, Authorization"
     );
-    res.setHeader("Access-Control-Max-Age", "86400");
     res.setHeader("Vary", "Origin");
   }
 
-  // Browser CORS preflight.
+  // مهم جدًا للـ preflight OPTIONS
   if (req.method === "OPTIONS") {
-    if (origin && !isAllowedOrigin(origin)) {
-      return res.status(403).json({ ok: false, message: "CORS origin not allowed" });
-    }
-    return res.status(204).end();
+    return res.sendStatus(204);
   }
 
   next();
+});
+
+app.use(express.json({ limit: "2mb" }));
+app.use(cookieParser());
+// Browser CORS preflight.
+if (req.method === "OPTIONS") {
+  if (origin && !isAllowedOrigin(origin)) {
+    return res.status(403).json({ ok: false, message: "CORS origin not allowed" });
+  }
+  return res.status(204).end();
+}
+
+next();
 });
 
 // Keep the package for normal CORS behavior on responses, but do not let it
