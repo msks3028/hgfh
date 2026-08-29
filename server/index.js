@@ -17,7 +17,7 @@ const HOST = process.env.HOST || "0.0.0.0";
 const FRONTEND_URL = process.env.FRONTEND_URL || "https://hgfh-zdwk.vercel.app";
 const ALLOWED_ORIGINS = String(
   process.env.FRONTEND_URLS ||
-    `${FRONTEND_URL},https://hgfh-two.vercel.app,http://localhost:5173`
+  `${FRONTEND_URL},https://hgfh-two.vercel.app,http://localhost:5173`
 )
   .split(",")
   .map((value) => value.trim().replace(/\/$/, ""))
@@ -68,17 +68,17 @@ const dbSsl = String(process.env.DB_SSL || "").toLowerCase() === "true";
 const pool = new Pool({
   ...(process.env.DATABASE_URL
     ? {
-        connectionString: process.env.DATABASE_URL,
-        ssl: dbSsl ? { rejectUnauthorized: false } : undefined,
-      }
+      connectionString: process.env.DATABASE_URL,
+      ssl: dbSsl ? { rejectUnauthorized: false } : undefined,
+    }
     : {
-        host: process.env.DB_HOST || "localhost",
-        port: Number(process.env.DB_PORT || 5432),
-        database: process.env.DB_NAME || "lurnova",
-        user: process.env.DB_USER || "postgres",
-        password: process.env.DB_PASSWORD,
-        ssl: dbSsl ? { rejectUnauthorized: false } : undefined,
-      }),
+      host: process.env.DB_HOST || "localhost",
+      port: Number(process.env.DB_PORT || 5432),
+      database: process.env.DB_NAME || "lurnova",
+      user: process.env.DB_USER || "postgres",
+      password: process.env.DB_PASSWORD,
+      ssl: dbSsl ? { rejectUnauthorized: false } : undefined,
+    }),
   max: Number(process.env.DB_POOL_MAX || 20),
   min: Number(process.env.DB_POOL_MIN || 2),
   idleTimeoutMillis: 30000,
@@ -136,10 +136,9 @@ app.use(cors({
   origin: true,
   credentials: true,
   methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept"],
+  allowedHeaders: ["Content-Type", "Authorization"],
   optionsSuccessStatus: 204,
 }));
-
 app.use(express.json({ limit: "2mb" }));
 app.use(cookieParser());
 
@@ -307,8 +306,8 @@ function removeUploadedFileFromUrl(value) {
     const target = path.resolve(UPLOAD_ROOT, relative);
     const root = path.resolve(UPLOAD_ROOT);
     if (target !== root && !target.startsWith(`${root}${path.sep}`)) return;
-    fs.unlink(target, () => {});
-  } catch {}
+    fs.unlink(target, () => { });
+  } catch { }
 }
 
 async function ensureSchema() {
@@ -513,17 +512,17 @@ async function ensureSchema() {
 }
 
 /* ---------------- Authentication ---------------- */
-app.get("/api/health", async (req,res) => {
+app.get("/api/health", async (req, res) => {
   try {
     const { rows } = await pool.query("SELECT NOW() AS time");
-    res.json({ ok:true, message:"Lurnova Backend يعمل بنجاح", database:"PostgreSQL", time:rows[0].time });
-  } catch(err) { routeError(res,err,"Health:"); }
+    res.json({ ok: true, message: "Lurnova Backend يعمل بنجاح", database: "PostgreSQL", time: rows[0].time });
+  } catch (err) { routeError(res, err, "Health:"); }
 });
 
-app.post("/api/auth/firebase", async (req,res) => {
+app.post("/api/auth/firebase", async (req, res) => {
   try {
     const idToken = String(req.body?.idToken || "").trim();
-    if (!idToken) return res.status(400).json({ ok:false, message:"رمز Firebase غير موجود." });
+    if (!idToken) return res.status(400).json({ ok: false, message: "رمز Firebase غير موجود." });
 
     const verifyResponse = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${encodeURIComponent(FIREBASE_WEB_API_KEY)}`, {
       method: "POST",
@@ -533,12 +532,12 @@ app.post("/api/auth/firebase", async (req,res) => {
     const verifyData = await verifyResponse.json().catch(() => ({}));
     if (!verifyResponse.ok || !Array.isArray(verifyData.users) || !verifyData.users[0]?.localId) {
       console.error("Firebase token verification failed:", verifyData?.error?.message || verifyResponse.status);
-      return res.status(401).json({ ok:false, message:"جلسة Google غير صالحة أو منتهية. سجّل الدخول مرة أخرى." });
+      return res.status(401).json({ ok: false, message: "جلسة Google غير صالحة أو منتهية. سجّل الدخول مرة أخرى." });
     }
 
     const firebaseUser = verifyData.users[0];
     const email = String(firebaseUser.email || "").trim().toLowerCase();
-    if (!email) return res.status(400).json({ ok:false, message:"حساب Firebase لا يحتوي على بريد إلكتروني." });
+    if (!email) return res.status(400).json({ ok: false, message: "حساب Firebase لا يحتوي على بريد إلكتروني." });
 
     const role = email === TEACHER_EMAIL ? "TEACHER" : "STUDENT";
     const id = `firebase_${firebaseUser.localId}`;
@@ -550,63 +549,65 @@ app.post("/api/auth/firebase", async (req,res) => {
        VALUES($1,$2,$3,$4,$5,'firebase',NOW())
        ON CONFLICT(email) DO UPDATE SET full_name=EXCLUDED.full_name,photo_url=EXCLUDED.photo_url,role=EXCLUDED.role,provider='firebase',updated_at=NOW()
        RETURNING id,email,full_name,photo_url,role,grade,provider`,
-      [id,email,displayName,photoUrl,role]
+      [id, email, displayName, photoUrl, role]
     );
 
     res.cookie("lurnova_session", signSession(rows[0]), sessionCookieOptions());
-    res.json({ ok:true, user:{
-      id:rows[0].id, uid:rows[0].id, email:rows[0].email, full_name:rows[0].full_name,
-      photoURL:rows[0].photo_url, role:rows[0].role, grade:rows[0].grade || "", provider:rows[0].provider
-    }});
-  } catch(err) {
+    res.json({
+      ok: true, user: {
+        id: rows[0].id, uid: rows[0].id, email: rows[0].email, full_name: rows[0].full_name,
+        photoURL: rows[0].photo_url, role: rows[0].role, grade: rows[0].grade || "", provider: rows[0].provider
+      }
+    });
+  } catch (err) {
     console.error("Firebase session:", err);
-    res.status(500).json({ ok:false, message:"تعذر إنشاء جلسة تسجيل الدخول. تأكد أن Backend يعمل واتصال الإنترنت متاح." });
+    res.status(500).json({ ok: false, message: "تعذر إنشاء جلسة تسجيل الدخول. تأكد أن Backend يعمل واتصال الإنترنت متاح." });
   }
 });
 
-app.get("/api/auth/me", requireAuth, (req,res) => {
-  const u=req.user;
-  res.json({authenticated:true,user:{id:u.id,uid:u.id,email:u.email,full_name:u.full_name,photoURL:u.photo_url,role:u.role,grade:u.grade||"",provider:u.provider}});
+app.get("/api/auth/me", requireAuth, (req, res) => {
+  const u = req.user;
+  res.json({ authenticated: true, user: { id: u.id, uid: u.id, email: u.email, full_name: u.full_name, photoURL: u.photo_url, role: u.role, grade: u.grade || "", provider: u.provider } });
 });
 
-app.patch("/api/auth/me", requireAuth, async (req,res) => {
+app.patch("/api/auth/me", requireAuth, async (req, res) => {
   try {
     const name = req.body?.full_name;
-    if (name !== undefined && !String(name).trim()) return res.status(400).json({ok:false,message:"الاسم مطلوب"});
+    if (name !== undefined && !String(name).trim()) return res.status(400).json({ ok: false, message: "الاسم مطلوب" });
     const photo = req.body?.photoURL;
     const grade = req.body?.grade;
-    if (grade !== undefined && !String(grade).trim()) return res.status(400).json({ok:false,message:"الصف الدراسي مطلوب"});
+    if (grade !== undefined && !String(grade).trim()) return res.status(400).json({ ok: false, message: "الصف الدراسي مطلوب" });
     const allowedGrades = [
-      "الصف الأول الابتدائي","الصف الثاني الابتدائي","الصف الثالث الابتدائي",
-      "الصف الرابع الابتدائي","الصف الخامس الابتدائي","الصف السادس الابتدائي",
-      "الصف الأول الإعدادي","الصف الثاني الإعدادي","الصف الثالث الإعدادي",
-      "الصف الأول الثانوي","الصف الثاني الثانوي","الصف الثالث الثانوي"
+      "الصف الأول الابتدائي", "الصف الثاني الابتدائي", "الصف الثالث الابتدائي",
+      "الصف الرابع الابتدائي", "الصف الخامس الابتدائي", "الصف السادس الابتدائي",
+      "الصف الأول الإعدادي", "الصف الثاني الإعدادي", "الصف الثالث الإعدادي",
+      "الصف الأول الثانوي", "الصف الثاني الثانوي", "الصف الثالث الثانوي"
     ];
     if (grade !== undefined && !allowedGrades.includes(String(grade).trim())) {
-      return res.status(400).json({ok:false,message:"الصف الدراسي غير صالح"});
+      return res.status(400).json({ ok: false, message: "الصف الدراسي غير صالح" });
     }
     const { rows } = await pool.query(
       `UPDATE users SET full_name=COALESCE($1,full_name),photo_url=COALESCE($2,photo_url),
        grade=COALESCE($3,grade),updated_at=NOW() WHERE id=$4
        RETURNING id,email,full_name,photo_url,role,grade,provider`,
       [
-        name===undefined?null:String(name).trim(),
-        photo===undefined?null:String(photo),
-        grade===undefined?null:String(grade).trim(),
+        name === undefined ? null : String(name).trim(),
+        photo === undefined ? null : String(photo),
+        grade === undefined ? null : String(grade).trim(),
         req.user.id
       ]
     );
-    res.json({ok:true,user:{id:rows[0].id,uid:rows[0].id,email:rows[0].email,full_name:rows[0].full_name,photoURL:rows[0].photo_url,role:rows[0].role,grade:rows[0].grade||"",provider:rows[0].provider}});
-  } catch(err) { routeError(res,err,"Update profile:"); }
+    res.json({ ok: true, user: { id: rows[0].id, uid: rows[0].id, email: rows[0].email, full_name: rows[0].full_name, photoURL: rows[0].photo_url, role: rows[0].role, grade: rows[0].grade || "", provider: rows[0].provider } });
+  } catch (err) { routeError(res, err, "Update profile:"); }
 });
 
-app.post("/api/auth/logout",(req,res)=>{res.clearCookie("lurnova_session",{...sessionCookieOptions(),maxAge:undefined});res.json({ok:true});});
+app.post("/api/auth/logout", (req, res) => { res.clearCookie("lurnova_session", { ...sessionCookieOptions(), maxAge: undefined }); res.json({ ok: true }); });
 
 /* ---------------- Teacher dashboard ---------------- */
-app.get("/api/teacher/dashboard",requireTeacher,async(req,res)=>{
+app.get("/api/teacher/dashboard", requireTeacher, async (req, res) => {
   try {
-    const id=req.user.id;
-    const [stats,courses,activity]=await Promise.all([
+    const id = req.user.id;
+    const [stats, courses, activity] = await Promise.all([
       pool.query(`SELECT
         (SELECT COUNT(DISTINCT e.student_id) FROM enrollments e JOIN courses c ON c.id=e.course_id WHERE c.teacher_id=$1)::int total_students,
         (SELECT COUNT(*) FROM courses WHERE teacher_id=$1)::int total_courses,
@@ -618,11 +619,11 @@ app.get("/api/teacher/dashboard",requireTeacher,async(req,res)=>{
         (SELECT COUNT(*) FROM lesson_views WHERE teacher_id=$1)::int video_views,
         (SELECT COUNT(*) FROM lesson_views WHERE teacher_id=$1 AND completion_percentage>=90)::int completed_views,
         COALESCE((SELECT ROUND(AVG(completion_percentage)::numeric,2) FROM lesson_views WHERE teacher_id=$1),0) average_completion,
-        (SELECT COUNT(*) FROM material_downloads WHERE teacher_id=$1)::int file_downloads`,[id]),
+        (SELECT COUNT(*) FROM material_downloads WHERE teacher_id=$1)::int file_downloads`, [id]),
       pool.query(`SELECT c.id,c.title,c.description,c.target_grade,c.cover_image,c.status,c.created_at,c.updated_at,
         COUNT(DISTINCT e.student_id)::int students_count,COUNT(DISTINCT l.id)::int lessons_count
         FROM courses c LEFT JOIN enrollments e ON e.course_id=c.id LEFT JOIN lessons l ON l.course_id=c.id
-        WHERE c.teacher_id=$1 GROUP BY c.id ORDER BY c.updated_at DESC LIMIT 6`,[id]),
+        WHERE c.teacher_id=$1 GROUP BY c.id ORDER BY c.updated_at DESC LIMIT 6`, [id]),
       pool.query(`SELECT * FROM (
         SELECT lv.id,'lesson_view' type,u.full_name student_name,l.title,l.title AS course_title,lv.completion_percentage,lv.last_watched_at created_at
         FROM lesson_views lv JOIN users u ON u.id=lv.student_id JOIN lessons l ON l.id=lv.lesson_id WHERE lv.teacher_id=$1
@@ -635,11 +636,11 @@ app.get("/api/teacher/dashboard",requireTeacher,async(req,res)=>{
         UNION ALL
         SELECT md.id,'material_download' type,u.full_name student_name,m.name title,m.name course_title,NULL completion_percentage,md.created_date
         FROM material_downloads md JOIN users u ON u.id=md.student_id JOIN materials m ON m.id=md.material_id WHERE md.teacher_id=$1
-      ) x ORDER BY created_at DESC LIMIT 20`,[id])
+      ) x ORDER BY created_at DESC LIMIT 20`, [id])
     ]);
-    const s=stats.rows[0];
-    res.json({ok:true,teacher:{id:req.user.id,name:req.user.full_name,email:req.user.email,photoURL:req.user.photo_url,role:req.user.role},stats:Object.fromEntries(Object.entries(s).map(([k,v])=>[k,Number(v)||0])),courses:courses.rows.map(c=>({...c,created_date:c.created_at,updated_date:c.updated_at,students_count:Number(c.students_count),lessons_count:Number(c.lessons_count)})),activity:activity.rows.map(a=>({...a,completion_percentage:a.completion_percentage==null?0:Number(a.completion_percentage)}))});
-  } catch(err) { routeError(res,err,"Teacher dashboard:"); }
+    const s = stats.rows[0];
+    res.json({ ok: true, teacher: { id: req.user.id, name: req.user.full_name, email: req.user.email, photoURL: req.user.photo_url, role: req.user.role }, stats: Object.fromEntries(Object.entries(s).map(([k, v]) => [k, Number(v) || 0])), courses: courses.rows.map(c => ({ ...c, created_date: c.created_at, updated_date: c.updated_at, students_count: Number(c.students_count), lessons_count: Number(c.lessons_count) })), activity: activity.rows.map(a => ({ ...a, completion_percentage: a.completion_percentage == null ? 0 : Number(a.completion_percentage) })) });
+  } catch (err) { routeError(res, err, "Teacher dashboard:"); }
 });
 
 /* ---------------- Global platform branding ---------------- */
@@ -725,7 +726,7 @@ app.put("/api/uploads", requireAuth, async (req, res) => {
       },
     });
   } catch (error) {
-    fs.unlink(filePath, () => {});
+    fs.unlink(filePath, () => { });
     if (error?.code === "LIMIT_FILE_SIZE" || error?.message === "UPLOAD_TOO_LARGE") {
       return res.status(413).json({ ok: false, message: "حجم الملف أكبر من الحد المسموح به." });
     }
@@ -741,28 +742,28 @@ app.put("/api/uploads", requireAuth, async (req, res) => {
 
 /* ---------------- Entity layer used by React pages ---------------- */
 const ENTITY = {
-  User:{table:"users",id:"id",legacy:true,columns:["id","email","full_name","photo_url","role","grade","provider","google_sub","created_at","updated_at"], teacherRead:true},
-  Course:{table:"courses",id:"id",legacy:true,teacher:true,columns:["title","description","target_grade","cover_image","status"]},
-  CourseSection:{table:"course_sections",id:"id",legacy:true,teacherVia:"course_id",columns:["course_id","title","description","sort_order"]},
-  Lesson:{table:"lessons",id:"id",legacy:true,teacher:true,columns:["course_id","section_id","title","description","video_url","thumbnail","target_grade","status","sort_order","duration"]},
-  Enrollment:{table:"enrollments",id:"id",legacy:true,columns:["student_id","course_id","progress"]},
-  LessonView:{table:"lesson_views",id:"id",legacy:true,columns:["student_id","teacher_id","course_id","lesson_id","completion_percentage","watch_duration","last_watched_at"]},
-  Material:{table:"materials",id:"id",teacher:true,columns:["course_id","name","title","description","file_url","file_name","file_type","target_grade","status","download_permission","size_bytes"]},
-  MaterialDownload:{table:"material_downloads",id:"id",columns:["student_id","teacher_id","course_id","file_id","material_id"]},
-  Exam:{table:"exams",id:"id",teacher:true,columns:["course_id","title","description","target_grade","duration","passing_score","status","exam_mode","pdf_url","pdf_name","questions"]},
-  ExamQuestion:{table:"exam_questions",id:"id",teacherVia:"exam_id",columns:["exam_id","question_text","type","options","correct_answer","points","sort_order"]},
-  ExamAttempt:{table:"exam_attempts",id:"id",columns:["student_id","teacher_id","course_id","exam_id","student_name","answers","score","possible","earned","passed","status","started_at","submitted_at","graded_at","teacher_note","graded_by","submitted_reason"]},
-  Assignment:{table:"assignments",id:"id",teacher:true,columns:["course_id","title","description","target_grade","attachment_url","status","due_date","deadline","max_score"]},
-  AssignmentSubmission:{table:"assignment_submissions",id:"id",columns:["student_id","teacher_id","assignment_id","course_id","file_url","text_answer","status","score","grade","feedback","submitted_at"]},
-  Announcement:{table:"announcements",id:"id",teacher:true,columns:["course_id","title","message","content","target_grade","status","date"]},
-  TeacherProfile:{table:"teacher_profiles",id:"id",teacher:true,uniqueTeacher:true,columns:["slug","page_title","bio","specialization","logo","cover_image","profile_image","theme_color","accent_color","social_links","section_order"]},
-  TeacherLink:{table:"teacher_links",id:"id",teacher:true,columns:["slug","status"]},
-  TeacherEvaluation:{table:"teacher_evaluations",id:"id",teacher:true,columns:["student_id","student_name","rating","score","level","note"]},
-  ProblemReport:{table:"problem_reports",id:"id",teacher:true,columns:["title","description","status"]},
+  User: { table: "users", id: "id", legacy: true, columns: ["id", "email", "full_name", "photo_url", "role", "grade", "provider", "google_sub", "created_at", "updated_at"], teacherRead: true },
+  Course: { table: "courses", id: "id", legacy: true, teacher: true, columns: ["title", "description", "target_grade", "cover_image", "status"] },
+  CourseSection: { table: "course_sections", id: "id", legacy: true, teacherVia: "course_id", columns: ["course_id", "title", "description", "sort_order"] },
+  Lesson: { table: "lessons", id: "id", legacy: true, teacher: true, columns: ["course_id", "section_id", "title", "description", "video_url", "thumbnail", "target_grade", "status", "sort_order", "duration"] },
+  Enrollment: { table: "enrollments", id: "id", legacy: true, columns: ["student_id", "course_id", "progress"] },
+  LessonView: { table: "lesson_views", id: "id", legacy: true, columns: ["student_id", "teacher_id", "course_id", "lesson_id", "completion_percentage", "watch_duration", "last_watched_at"] },
+  Material: { table: "materials", id: "id", teacher: true, columns: ["course_id", "name", "title", "description", "file_url", "file_name", "file_type", "target_grade", "status", "download_permission", "size_bytes"] },
+  MaterialDownload: { table: "material_downloads", id: "id", columns: ["student_id", "teacher_id", "course_id", "file_id", "material_id"] },
+  Exam: { table: "exams", id: "id", teacher: true, columns: ["course_id", "title", "description", "target_grade", "duration", "passing_score", "status", "exam_mode", "pdf_url", "pdf_name", "questions"] },
+  ExamQuestion: { table: "exam_questions", id: "id", teacherVia: "exam_id", columns: ["exam_id", "question_text", "type", "options", "correct_answer", "points", "sort_order"] },
+  ExamAttempt: { table: "exam_attempts", id: "id", columns: ["student_id", "teacher_id", "course_id", "exam_id", "student_name", "answers", "score", "possible", "earned", "passed", "status", "started_at", "submitted_at", "graded_at", "teacher_note", "graded_by", "submitted_reason"] },
+  Assignment: { table: "assignments", id: "id", teacher: true, columns: ["course_id", "title", "description", "target_grade", "attachment_url", "status", "due_date", "deadline", "max_score"] },
+  AssignmentSubmission: { table: "assignment_submissions", id: "id", columns: ["student_id", "teacher_id", "assignment_id", "course_id", "file_url", "text_answer", "status", "score", "grade", "feedback", "submitted_at"] },
+  Announcement: { table: "announcements", id: "id", teacher: true, columns: ["course_id", "title", "message", "content", "target_grade", "status", "date"] },
+  TeacherProfile: { table: "teacher_profiles", id: "id", teacher: true, uniqueTeacher: true, columns: ["slug", "page_title", "bio", "specialization", "logo", "cover_image", "profile_image", "theme_color", "accent_color", "social_links", "section_order"] },
+  TeacherLink: { table: "teacher_links", id: "id", teacher: true, columns: ["slug", "status"] },
+  TeacherEvaluation: { table: "teacher_evaluations", id: "id", teacher: true, columns: ["student_id", "student_name", "rating", "score", "level", "note"] },
+  ProblemReport: { table: "problem_reports", id: "id", teacher: true, columns: ["title", "description", "status"] },
 };
 
-const aliases = {created_date:"created_at",updated_date:"updated_at",order:"sort_order"};
-const externalAliases = {created_at:"created_date",updated_at:"updated_date",created_date:"created_date",updated_date:"updated_date",photo_url:"photoURL"};
+const aliases = { created_date: "created_at", updated_date: "updated_at", order: "sort_order" };
+const externalAliases = { created_at: "created_date", updated_at: "updated_date", created_date: "created_date", updated_date: "updated_date", photo_url: "photoURL" };
 
 // Existing Lurnova databases may have been created by an older build where
 // some tables use created_date/updated_date while the newer PostgreSQL tables
@@ -784,183 +785,183 @@ async function timestampColumn(table, kind) {
   return candidates.find(c => columns.has(c)) || candidates[0];
 }
 
-const normalizeRow = (entity,row) => {
-  const out={...row};
+const normalizeRow = (entity, row) => {
+  const out = { ...row };
   if (entity.legacy) {
     out.created_date = row.created_at ?? row.created_date ?? null;
     out.updated_date = row.updated_at ?? row.updated_date ?? null;
   }
-  if (entity==="User") out.photoURL=row.photo_url||"";
-  if (entity==="Lesson") out.order=row.sort_order;
-  if (entity==="CourseSection") out.order=row.sort_order;
-  if (entity==="ExamQuestion") out.order=row.sort_order;
-  if (entity==="Announcement") out.content=row.content||row.message||"";
-  if (entity==="AssignmentSubmission") out.grade=row.grade ?? row.score ?? null;
+  if (entity === "User") out.photoURL = row.photo_url || "";
+  if (entity === "Lesson") out.order = row.sort_order;
+  if (entity === "CourseSection") out.order = row.sort_order;
+  if (entity === "ExamQuestion") out.order = row.sort_order;
+  if (entity === "Announcement") out.content = row.content || row.message || "";
+  if (entity === "AssignmentSubmission") out.grade = row.grade ?? row.score ?? null;
   return out;
 };
-const dbValue=(key,value)=>{
-  if (["course_id","section_id","assignment_id","exam_id","student_id","teacher_id","file_id","material_id"].includes(key) && (value === "" || value === null || value === undefined)) return null;
-  if (["due_date","deadline","submitted_at","started_at","graded_at"].includes(key) && (value === "" || value === null || value === undefined)) return null;
-  if (key==="social_links"||key==="section_order"||key==="questions"||key==="options"||key==="answers") return typeof value==="string" ? value : JSON.stringify(value ?? (key==="questions"||key==="options"?[]:{}));
-  if (key==="photoURL") return value;
+const dbValue = (key, value) => {
+  if (["course_id", "section_id", "assignment_id", "exam_id", "student_id", "teacher_id", "file_id", "material_id"].includes(key) && (value === "" || value === null || value === undefined)) return null;
+  if (["due_date", "deadline", "submitted_at", "started_at", "graded_at"].includes(key) && (value === "" || value === null || value === undefined)) return null;
+  if (key === "social_links" || key === "section_order" || key === "questions" || key === "options" || key === "answers") return typeof value === "string" ? value : JSON.stringify(value ?? (key === "questions" || key === "options" ? [] : {}));
+  if (key === "photoURL") return value;
   return value;
 };
 function requestedSort(sort) {
   return String(sort || "-created_date").replace(/^-/i, "");
 }
-function cleanFilters(entity,q={}) {
-  const config=ENTITY[entity];
-  return Object.entries(q||{}).filter(([key,value])=>value!==""&&value!==null&&value!==undefined&&key!=="teacher_id").filter(([key])=>config.columns.includes(key) || key===config.id);
+function cleanFilters(entity, q = {}) {
+  const config = ENTITY[entity];
+  return Object.entries(q || {}).filter(([key, value]) => value !== "" && value !== null && value !== undefined && key !== "teacher_id").filter(([key]) => config.columns.includes(key) || key === config.id);
 }
-async function teacherOwnsEntity(client,entity,id,teacherId) {
-  const c=ENTITY[entity];
+async function teacherOwnsEntity(client, entity, id, teacherId) {
+  const c = ENTITY[entity];
   if (!c) return false;
   if (c.teacher) {
-    const r=await client.query(`SELECT 1 FROM ${c.table} WHERE id=$1 AND teacher_id=$2 LIMIT 1`,[id,teacherId]);
+    const r = await client.query(`SELECT 1 FROM ${c.table} WHERE id=$1 AND teacher_id=$2 LIMIT 1`, [id, teacherId]);
     return !!r.rowCount;
   }
   if (c.teacherVia) {
-    const r=await client.query(`SELECT 1 FROM ${c.table} x JOIN courses c ON c.id=x.course_id WHERE x.id=$1 AND c.teacher_id=$2 LIMIT 1`,[id,teacherId]);
+    const r = await client.query(`SELECT 1 FROM ${c.table} x JOIN courses c ON c.id=x.course_id WHERE x.id=$1 AND c.teacher_id=$2 LIMIT 1`, [id, teacherId]);
     return !!r.rowCount;
   }
-  if (entity==="ExamQuestion") {
-    const r=await client.query(`SELECT 1 FROM exam_questions q JOIN exams e ON e.id=q.exam_id WHERE q.id=$1 AND e.teacher_id=$2 LIMIT 1`,[id,teacherId]);
+  if (entity === "ExamQuestion") {
+    const r = await client.query(`SELECT 1 FROM exam_questions q JOIN exams e ON e.id=q.exam_id WHERE q.id=$1 AND e.teacher_id=$2 LIMIT 1`, [id, teacherId]);
     return !!r.rowCount;
   }
-  if (entity==="AssignmentSubmission") {
-    const r=await client.query(`SELECT 1 FROM assignment_submissions s WHERE s.id=$1 AND s.teacher_id=$2 LIMIT 1`,[id,teacherId]);
+  if (entity === "AssignmentSubmission") {
+    const r = await client.query(`SELECT 1 FROM assignment_submissions s WHERE s.id=$1 AND s.teacher_id=$2 LIMIT 1`, [id, teacherId]);
     return !!r.rowCount;
   }
-  if (["LessonView","MaterialDownload","ExamAttempt"].includes(entity)) {
-    const r=await client.query(`SELECT 1 FROM ${c.table} WHERE id=$1 AND teacher_id=$2 LIMIT 1`,[id,teacherId]);
+  if (["LessonView", "MaterialDownload", "ExamAttempt"].includes(entity)) {
+    const r = await client.query(`SELECT 1 FROM ${c.table} WHERE id=$1 AND teacher_id=$2 LIMIT 1`, [id, teacherId]);
     return !!r.rowCount;
   }
-  if (entity==="TeacherEvaluation"||entity==="TeacherLink"||entity==="TeacherProfile") {
-    const r=await client.query(`SELECT 1 FROM ${c.table} WHERE id=$1 AND teacher_id=$2 LIMIT 1`,[id,teacherId]);
+  if (entity === "TeacherEvaluation" || entity === "TeacherLink" || entity === "TeacherProfile") {
+    const r = await client.query(`SELECT 1 FROM ${c.table} WHERE id=$1 AND teacher_id=$2 LIMIT 1`, [id, teacherId]);
     return !!r.rowCount;
   }
   return true;
 }
 
-app.get("/api/entities/:entity",requireAuth,async(req,res)=>{
-  const entity=req.params.entity; const c=ENTITY[entity];
-  if (!c) return res.status(404).json({ok:false,message:"Entity غير مدعومة"});
+app.get("/api/entities/:entity", requireAuth, async (req, res) => {
+  const entity = req.params.entity; const c = ENTITY[entity];
+  if (!c) return res.status(404).json({ ok: false, message: "Entity غير مدعومة" });
   try {
-    const limit=Math.min(2000,Math.max(1,Number(req.query.limit||100)));
-    const sort=String(req.query.sort||"-created_date"); const dir=sort.startsWith("-")?"DESC":"ASC";
-    const requested=requestedSort(sort);
+    const limit = Math.min(2000, Math.max(1, Number(req.query.limit || 100)));
+    const sort = String(req.query.sort || "-created_date"); const dir = sort.startsWith("-") ? "DESC" : "ASC";
+    const requested = requestedSort(sort);
     let col = requested;
     if (requested === "created_date" || requested === "created_at") col = await timestampColumn(c.table, "created");
     else if (requested === "updated_date" || requested === "updated_at") col = await timestampColumn(c.table, "updated");
     else if (requested === "order") col = "sort_order";
-    if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(col)) return res.status(400).json({ok:false,message:"ترتيب غير صالح"});
+    if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(col)) return res.status(400).json({ ok: false, message: "ترتيب غير صالح" });
     const tableColumns = await getTableColumns(c.table);
-    if (!tableColumns.has(col)) return res.status(400).json({ok:false,message:`حقل الترتيب غير موجود: ${col}`});
-    const filters=cleanFilters(entity,req.query);
-    const values=[]; const where=[];
-    if (entity==="User") {
+    if (!tableColumns.has(col)) return res.status(400).json({ ok: false, message: `حقل الترتيب غير موجود: ${col}` });
+    const filters = cleanFilters(entity, req.query);
+    const values = []; const where = [];
+    if (entity === "User") {
       where.push(`role='STUDENT'`);
-      if(req.user.role!=="TEACHER"){ values.push(req.user.id); where.push(`id=$${values.length}`); }
+      if (req.user.role !== "TEACHER") { values.push(req.user.id); where.push(`id=$${values.length}`); }
     }
-    if (c.teacher && req.user.role==="TEACHER") { values.push(req.user.id); where.push(`teacher_id=$${values.length}`); }
-    if (c.teacherVia && req.user.role==="TEACHER") { values.push(req.user.id); where.push(`c.teacher_id=$${values.length}`); }
-    if (entity==="ExamQuestion" && req.user.role==="TEACHER") { values.push(req.user.id); where.push(`e.teacher_id=$${values.length}`); }
-    if (["AssignmentSubmission","LessonView","MaterialDownload","ExamAttempt"].includes(entity)) {
-      if(req.user.role==="TEACHER") { values.push(req.user.id); where.push(`x.teacher_id=$${values.length}`); }
+    if (c.teacher && req.user.role === "TEACHER") { values.push(req.user.id); where.push(`teacher_id=$${values.length}`); }
+    if (c.teacherVia && req.user.role === "TEACHER") { values.push(req.user.id); where.push(`c.teacher_id=$${values.length}`); }
+    if (entity === "ExamQuestion" && req.user.role === "TEACHER") { values.push(req.user.id); where.push(`e.teacher_id=$${values.length}`); }
+    if (["AssignmentSubmission", "LessonView", "MaterialDownload", "ExamAttempt"].includes(entity)) {
+      if (req.user.role === "TEACHER") { values.push(req.user.id); where.push(`x.teacher_id=$${values.length}`); }
       else { values.push(req.user.id); where.push(`x.student_id=$${values.length}`); }
     }
-    if (entity==="Enrollment" && req.user.role!=="TEACHER") { values.push(req.user.id); where.push(`student_id=$${values.length}`); }
-    if (entity==="TeacherProfile" && req.user.role==="TEACHER") { values.push(req.user.id); where.push(`teacher_id=$${values.length}`); }
-    if (entity==="TeacherEvaluation" && req.user.role==="TEACHER") { values.push(req.user.id); where.push(`teacher_id=$${values.length}`); }
-    if (entity==="TeacherLink" && req.user.role==="TEACHER") { values.push(req.user.id); where.push(`teacher_id=$${values.length}`); }
-    if (req.user.role!=="TEACHER" && ["Course","Lesson","Material","Exam","Assignment","Announcement"].includes(entity)) {
+    if (entity === "Enrollment" && req.user.role !== "TEACHER") { values.push(req.user.id); where.push(`student_id=$${values.length}`); }
+    if (entity === "TeacherProfile" && req.user.role === "TEACHER") { values.push(req.user.id); where.push(`teacher_id=$${values.length}`); }
+    if (entity === "TeacherEvaluation" && req.user.role === "TEACHER") { values.push(req.user.id); where.push(`teacher_id=$${values.length}`); }
+    if (entity === "TeacherLink" && req.user.role === "TEACHER") { values.push(req.user.id); where.push(`teacher_id=$${values.length}`); }
+    if (req.user.role !== "TEACHER" && ["Course", "Lesson", "Material", "Exam", "Assignment", "Announcement"].includes(entity)) {
       values.push("published");
       where.push(`status=$${values.length}`);
     }
-    for (const [key,value] of filters) { const dbKey=aliases[key]||key; values.push(value); where.push(`${entity==="ExamQuestion"?"q.":(["AssignmentSubmission","LessonView","MaterialDownload","ExamAttempt"].includes(entity)?"x.":"")}${dbKey}=$${values.length}`); }
-    let from=`${c.table}`; let select="*";
-    if (c.teacherVia) select="x.*";
-    else if (entity==="ExamQuestion") select="q.*";
-    else if (["AssignmentSubmission","LessonView","MaterialDownload","ExamAttempt"].includes(entity)) select="x.*";
-    if (c.teacherVia) from=`${c.table} x JOIN courses c ON c.id=x.course_id`;
-    else if (entity==="ExamQuestion") from=`exam_questions q JOIN exams e ON e.id=q.exam_id`;
-    else if (["AssignmentSubmission","LessonView","MaterialDownload","ExamAttempt"].includes(entity)) from=`${c.table} x`;
-    const {rows}=await pool.query(`SELECT ${select} FROM ${from}${where.length?` WHERE ${where.join(" AND ")}`:""} ORDER BY ${entity==="ExamQuestion"?"q.":(["AssignmentSubmission","LessonView","MaterialDownload","ExamAttempt"].includes(entity)?"x.":"")}${col} ${dir} LIMIT ${limit}`,values);
-    res.json({ok:true,items:rows.map(r=>normalizeRow(entity,r))});
-  } catch(err) { routeError(res,err,`List ${entity}:`); }
+    for (const [key, value] of filters) { const dbKey = aliases[key] || key; values.push(value); where.push(`${entity === "ExamQuestion" ? "q." : (["AssignmentSubmission", "LessonView", "MaterialDownload", "ExamAttempt"].includes(entity) ? "x." : "")}${dbKey}=$${values.length}`); }
+    let from = `${c.table}`; let select = "*";
+    if (c.teacherVia) select = "x.*";
+    else if (entity === "ExamQuestion") select = "q.*";
+    else if (["AssignmentSubmission", "LessonView", "MaterialDownload", "ExamAttempt"].includes(entity)) select = "x.*";
+    if (c.teacherVia) from = `${c.table} x JOIN courses c ON c.id=x.course_id`;
+    else if (entity === "ExamQuestion") from = `exam_questions q JOIN exams e ON e.id=q.exam_id`;
+    else if (["AssignmentSubmission", "LessonView", "MaterialDownload", "ExamAttempt"].includes(entity)) from = `${c.table} x`;
+    const { rows } = await pool.query(`SELECT ${select} FROM ${from}${where.length ? ` WHERE ${where.join(" AND ")}` : ""} ORDER BY ${entity === "ExamQuestion" ? "q." : (["AssignmentSubmission", "LessonView", "MaterialDownload", "ExamAttempt"].includes(entity) ? "x." : "")}${col} ${dir} LIMIT ${limit}`, values);
+    res.json({ ok: true, items: rows.map(r => normalizeRow(entity, r)) });
+  } catch (err) { routeError(res, err, `List ${entity}:`); }
 });
 
-app.post("/api/entities/:entity",requireTeacher,async(req,res)=>{
-  const entity=req.params.entity; const c=ENTITY[entity];
-  if (!c || entity==="User") return res.status(404).json({ok:false,message:"Entity غير مدعومة"});
+app.post("/api/entities/:entity", requireTeacher, async (req, res) => {
+  const entity = req.params.entity; const c = ENTITY[entity];
+  if (!c || entity === "User") return res.status(404).json({ ok: false, message: "Entity غير مدعومة" });
   try {
-    const data={...(req.body||{})};
-    if (c.teacher) data.teacher_id=req.user.id;
+    const data = { ...(req.body || {}) };
+    if (c.teacher) data.teacher_id = req.user.id;
 
     // A teacher may only attach content to courses they own. Empty course IDs
     // are treated as NULL by dbValue so optional-course content is valid.
     if (data.course_id) {
-      const owner=await pool.query(`SELECT 1 FROM courses WHERE id=$1 AND teacher_id=$2 LIMIT 1`,[data.course_id,req.user.id]);
-      if(!owner.rowCount) return res.status(404).json({ok:false,message:"الكورس غير موجود أو لا تملكه"});
+      const owner = await pool.query(`SELECT 1 FROM courses WHERE id=$1 AND teacher_id=$2 LIMIT 1`, [data.course_id, req.user.id]);
+      if (!owner.rowCount) return res.status(404).json({ ok: false, message: "الكورس غير موجود أو لا تملكه" });
     }
-    if (entity==="TeacherEvaluation"||entity==="TeacherProfile"||entity==="TeacherLink") data.teacher_id=req.user.id;
-    if (entity==="CourseSection") {
-      const owner=await pool.query(`SELECT 1 FROM courses WHERE id=$1 AND teacher_id=$2`,[data.course_id,req.user.id]);
-      if(!owner.rowCount) return res.status(404).json({ok:false,message:"الكورس غير موجود"});
+    if (entity === "TeacherEvaluation" || entity === "TeacherProfile" || entity === "TeacherLink") data.teacher_id = req.user.id;
+    if (entity === "CourseSection") {
+      const owner = await pool.query(`SELECT 1 FROM courses WHERE id=$1 AND teacher_id=$2`, [data.course_id, req.user.id]);
+      if (!owner.rowCount) return res.status(404).json({ ok: false, message: "الكورس غير موجود" });
     }
-    if (entity==="ExamQuestion") {
-      const owner=await pool.query(`SELECT 1 FROM exams WHERE id=$1 AND teacher_id=$2`,[data.exam_id,req.user.id]);
-      if(!owner.rowCount) return res.status(404).json({ok:false,message:"الاختبار غير موجود"});
+    if (entity === "ExamQuestion") {
+      const owner = await pool.query(`SELECT 1 FROM exams WHERE id=$1 AND teacher_id=$2`, [data.exam_id, req.user.id]);
+      if (!owner.rowCount) return res.status(404).json({ ok: false, message: "الاختبار غير موجود" });
     }
-    if (entity==="AssignmentSubmission") data.teacher_id=req.user.id;
-    if (entity==="LessonView") data.teacher_id=req.user.id;
-    if (entity==="MaterialDownload") data.teacher_id=req.user.id;
-    if (entity==="ExamAttempt") data.teacher_id=req.user.id;
+    if (entity === "AssignmentSubmission") data.teacher_id = req.user.id;
+    if (entity === "LessonView") data.teacher_id = req.user.id;
+    if (entity === "MaterialDownload") data.teacher_id = req.user.id;
+    if (entity === "ExamAttempt") data.teacher_id = req.user.id;
 
-    const fields=c.columns.filter(k=>data[k]!==undefined);
-    if (entity==="ExamQuestion") fields.push("teacher_id");
-    if (entity==="Course") fields.push("teacher_id");
+    const fields = c.columns.filter(k => data[k] !== undefined);
+    if (entity === "ExamQuestion") fields.push("teacher_id");
+    if (entity === "Course") fields.push("teacher_id");
     else if (c.teacher && !fields.includes("teacher_id")) fields.push("teacher_id");
-    else if (["TeacherEvaluation","TeacherProfile","TeacherLink","AssignmentSubmission","LessonView","MaterialDownload","ExamAttempt"].includes(entity) && !fields.includes("teacher_id")) fields.push("teacher_id");
-    const uniqueFields=[...new Set(fields)];
+    else if (["TeacherEvaluation", "TeacherProfile", "TeacherLink", "AssignmentSubmission", "LessonView", "MaterialDownload", "ExamAttempt"].includes(entity) && !fields.includes("teacher_id")) fields.push("teacher_id");
+    const uniqueFields = [...new Set(fields)];
     if (c.uniqueTeacher) {
-      const exists=await pool.query(`SELECT * FROM ${c.table} WHERE teacher_id=$1 LIMIT 1`,[req.user.id]);
-      if(exists.rows[0]) return res.status(409).json({ok:false,message:"إعدادات المدرس موجودة بالفعل",item:normalizeRow(entity,exists.rows[0])});
+      const exists = await pool.query(`SELECT * FROM ${c.table} WHERE teacher_id=$1 LIMIT 1`, [req.user.id]);
+      if (exists.rows[0]) return res.status(409).json({ ok: false, message: "إعدادات المدرس موجودة بالفعل", item: normalizeRow(entity, exists.rows[0]) });
     }
-    const vals=uniqueFields.map(k=>dbValue(k,k==="teacher_id"?req.user.id:data[k]));
-    const placeholders=vals.map((_,i)=>`$${i+1}`).join(",");
-    const {rows}=await pool.query(`INSERT INTO ${c.table} (${uniqueFields.join(",")}) VALUES (${placeholders}) RETURNING *`,vals);
-    res.status(201).json({ok:true,item:normalizeRow(entity,rows[0])});
-  } catch(err) { routeError(res,err,`Create ${entity}:`); }
+    const vals = uniqueFields.map(k => dbValue(k, k === "teacher_id" ? req.user.id : data[k]));
+    const placeholders = vals.map((_, i) => `$${i + 1}`).join(",");
+    const { rows } = await pool.query(`INSERT INTO ${c.table} (${uniqueFields.join(",")}) VALUES (${placeholders}) RETURNING *`, vals);
+    res.status(201).json({ ok: true, item: normalizeRow(entity, rows[0]) });
+  } catch (err) { routeError(res, err, `Create ${entity}:`); }
 });
 
-app.patch("/api/entities/:entity/:id",requireTeacher,async(req,res)=>{
-  const entity=req.params.entity; const c=ENTITY[entity];
-  if (!c || entity==="User") return res.status(404).json({ok:false,message:"Entity غير مدعومة"});
+app.patch("/api/entities/:entity/:id", requireTeacher, async (req, res) => {
+  const entity = req.params.entity; const c = ENTITY[entity];
+  if (!c || entity === "User") return res.status(404).json({ ok: false, message: "Entity غير مدعومة" });
   try {
-    const client=await pool.connect();
+    const client = await pool.connect();
     try {
-      if(!(await teacherOwnsEntity(client,entity,req.params.id,req.user.id))) return res.status(404).json({ok:false,message:"العنصر غير موجود أو لا تملكه"});
-      const data={...(req.body||{})};
-      const fields=c.columns.filter(k=>data[k]!==undefined);
-      if(!fields.length) { const r=await client.query(`SELECT * FROM ${c.table} WHERE id=$1`,[req.params.id]); return res.json({ok:true,item:normalizeRow(entity,r.rows[0])}); }
-      const sets=[]; const vals=[];
-      for(const key of fields){ vals.push(dbValue(key,data[key])); sets.push(`${key}=$${vals.length}`); }
-      const updatedField=await timestampColumn(c.table,"updated"); sets.push(`${updatedField}=NOW()`);
+      if (!(await teacherOwnsEntity(client, entity, req.params.id, req.user.id))) return res.status(404).json({ ok: false, message: "العنصر غير موجود أو لا تملكه" });
+      const data = { ...(req.body || {}) };
+      const fields = c.columns.filter(k => data[k] !== undefined);
+      if (!fields.length) { const r = await client.query(`SELECT * FROM ${c.table} WHERE id=$1`, [req.params.id]); return res.json({ ok: true, item: normalizeRow(entity, r.rows[0]) }); }
+      const sets = []; const vals = [];
+      for (const key of fields) { vals.push(dbValue(key, data[key])); sets.push(`${key}=$${vals.length}`); }
+      const updatedField = await timestampColumn(c.table, "updated"); sets.push(`${updatedField}=NOW()`);
       vals.push(req.params.id);
-      const {rows}=await client.query(`UPDATE ${c.table} SET ${sets.join(",")} WHERE id=$${vals.length} RETURNING *`,vals);
-      res.json({ok:true,item:normalizeRow(entity,rows[0])});
+      const { rows } = await client.query(`UPDATE ${c.table} SET ${sets.join(",")} WHERE id=$${vals.length} RETURNING *`, vals);
+      res.json({ ok: true, item: normalizeRow(entity, rows[0]) });
     } finally { client.release(); }
-  } catch(err) { routeError(res,err,`Update ${entity}:`); }
+  } catch (err) { routeError(res, err, `Update ${entity}:`); }
 });
 
-app.delete("/api/entities/:entity/:id",requireTeacher,async(req,res)=>{
-  const entity=req.params.entity; const c=ENTITY[entity];
-  if(!c || entity==="User") return res.status(404).json({ok:false,message:"Entity غير مدعومة"});
+app.delete("/api/entities/:entity/:id", requireTeacher, async (req, res) => {
+  const entity = req.params.entity; const c = ENTITY[entity];
+  if (!c || entity === "User") return res.status(404).json({ ok: false, message: "Entity غير مدعومة" });
   try {
-    const client=await pool.connect();
+    const client = await pool.connect();
     try {
-      if(!(await teacherOwnsEntity(client,entity,req.params.id,req.user.id))) return res.status(404).json({ok:false,message:"العنصر غير موجود أو لا تملكه"});
+      if (!(await teacherOwnsEntity(client, entity, req.params.id, req.user.id))) return res.status(404).json({ ok: false, message: "العنصر غير موجود أو لا تملكه" });
       let removedFileUrls = [];
       if (entity === "Material") {
         const old = await client.query(`SELECT file_url FROM materials WHERE id=$1`, [req.params.id]);
@@ -975,31 +976,31 @@ app.delete("/api/entities/:entity/:id",requireTeacher,async(req,res)=>{
         const old = await client.query(`SELECT logo,cover_image,profile_image FROM teacher_profiles WHERE id=$1`, [req.params.id]);
         removedFileUrls = old.rows.flatMap(r => [r.logo, r.cover_image, r.profile_image]).filter(Boolean);
       }
-      const r=await client.query(`DELETE FROM ${c.table} WHERE id=$1`,[req.params.id]);
-      if(!r.rowCount) return res.status(404).json({ok:false,message:"العنصر غير موجود"});
+      const r = await client.query(`DELETE FROM ${c.table} WHERE id=$1`, [req.params.id]);
+      if (!r.rowCount) return res.status(404).json({ ok: false, message: "العنصر غير موجود" });
       removedFileUrls.forEach(removeUploadedFileFromUrl);
-      res.json({ok:true,success:true});
+      res.json({ ok: true, success: true });
     } finally { client.release(); }
-  } catch(err) { routeError(res,err,`Delete ${entity}:`); }
+  } catch (err) { routeError(res, err, `Delete ${entity}:`); }
 });
 
 /* ---------------- Teacher-specific server functions ---------------- */
-app.post("/api/functions/:name",requireAuth,async(req,res)=>{
-  const name=req.params.name; const p=req.body||{};
+app.post("/api/functions/:name", requireAuth, async (req, res) => {
+  const name = req.params.name; const p = req.body || {};
   try {
-    if(name==="getTeacherAnalytics") {
-      if(req.user.role!=="TEACHER") return res.status(403).json({ok:false,message:"غير مصرح"});
-      const id=req.user.id;
-      const grade=String(p.grade||"").trim();
-      const hasGrade=Boolean(grade && grade!=="all");
-      const gradeParam=hasGrade ? grade : null;
+    if (name === "getTeacherAnalytics") {
+      if (req.user.role !== "TEACHER") return res.status(403).json({ ok: false, message: "غير مصرح" });
+      const id = req.user.id;
+      const grade = String(p.grade || "").trim();
+      const hasGrade = Boolean(grade && grade !== "all");
+      const gradeParam = hasGrade ? grade : null;
       const courseGrade = hasGrade ? ` AND c.target_grade=$2` : "";
       const lessonGrade = hasGrade ? ` AND COALESCE(NULLIF(l.target_grade,''), c.target_grade)=$2` : "";
       const materialGrade = hasGrade ? ` AND COALESCE(NULLIF(m.target_grade,''), c.target_grade)=$2` : "";
       const examGrade = hasGrade ? ` AND COALESCE(NULLIF(e.target_grade,''), c.target_grade)=$2` : "";
       const assignmentGrade = hasGrade ? ` AND COALESCE(NULLIF(a.target_grade,''), c.target_grade)=$2` : "";
-      const values=hasGrade ? [id,gradeParam] : [id];
-      const [r,top,users]=await Promise.all([
+      const values = hasGrade ? [id, gradeParam] : [id];
+      const [r, top, users] = await Promise.all([
         pool.query(`SELECT
           (SELECT COUNT(DISTINCT e.student_id) FROM enrollments e JOIN courses c ON c.id=e.course_id WHERE c.teacher_id=$1${courseGrade})::int total_students,
           (SELECT COUNT(*) FROM lesson_views lv JOIN lessons l ON l.id=lv.lesson_id LEFT JOIN courses c ON c.id=l.course_id WHERE lv.teacher_id=$1${lessonGrade})::int video_views,
@@ -1013,18 +1014,18 @@ app.post("/api/functions/:name",requireAuth,async(req,res)=>{
           (SELECT COUNT(*) FROM lessons l LEFT JOIN courses c ON c.id=l.course_id WHERE l.teacher_id=$1 AND l.video_url<>''${lessonGrade})::int total_videos,
           (SELECT COUNT(*) FROM materials m LEFT JOIN courses c ON c.id=m.course_id WHERE m.teacher_id=$1${materialGrade})::int total_files,
           (SELECT COUNT(*) FROM exams e LEFT JOIN courses c ON c.id=e.course_id WHERE e.teacher_id=$1${examGrade})::int total_exams,
-          (SELECT COUNT(*) FROM assignments a LEFT JOIN courses c ON c.id=a.course_id WHERE a.teacher_id=$1${assignmentGrade})::int total_assignments`,values),
+          (SELECT COUNT(*) FROM assignments a LEFT JOIN courses c ON c.id=a.course_id WHERE a.teacher_id=$1${assignmentGrade})::int total_assignments`, values),
         pool.query(`SELECT m.id file_id,COALESCE(NULLIF(m.name,''),m.title,'ملف') name,COUNT(*)::int downloads
-          FROM material_downloads d JOIN materials m ON m.id=d.material_id LEFT JOIN courses c ON c.id=m.course_id WHERE d.teacher_id=$1${materialGrade} GROUP BY m.id,m.name,m.title ORDER BY downloads DESC LIMIT 10`,values),
+          FROM material_downloads d JOIN materials m ON m.id=d.material_id LEFT JOIN courses c ON c.id=m.course_id WHERE d.teacher_id=$1${materialGrade} GROUP BY m.id,m.name,m.title ORDER BY downloads DESC LIMIT 10`, values),
         pool.query(`SELECT id,full_name,email,photo_url,role,grade,updated_at FROM users WHERE role='STUDENT' ORDER BY updated_at DESC LIMIT 2000`)
       ]);
-      res.json({ok:true,data:{...Object.fromEntries(Object.entries(r.rows[0]).map(([k,v])=>[k,Number(v)||0])),grade:hasGrade?grade:"all",top_files:top.rows,platform_users:users.rows.map(u=>({...u,photoURL:u.photo_url,updated_date:u.updated_at}))}});
+      res.json({ ok: true, data: { ...Object.fromEntries(Object.entries(r.rows[0]).map(([k, v]) => [k, Number(v) || 0])), grade: hasGrade ? grade : "all", top_files: top.rows, platform_users: users.rows.map(u => ({ ...u, photoURL: u.photo_url, updated_date: u.updated_at })) } });
       return;
     }
-    if(name==="getTeacherStudents") {
-      if(req.user.role!=="TEACHER") return res.status(403).json({ok:false,message:"غير مصرح"});
-      const id=req.user.id;
-      const {rows}=await pool.query(`SELECT u.id student_id,u.full_name name,u.email,u.grade,
+    if (name === "getTeacherStudents") {
+      if (req.user.role !== "TEACHER") return res.status(403).json({ ok: false, message: "غير مصرح" });
+      const id = req.user.id;
+      const { rows } = await pool.query(`SELECT u.id student_id,u.full_name name,u.email,u.grade,
         COUNT(DISTINCT e.course_id)::int courses,
         COUNT(DISTINCT lv.id)::int video_views,
         COUNT(DISTINCT md.id)::int downloads,
@@ -1040,83 +1041,83 @@ app.post("/api/functions/:name",requireAuth,async(req,res)=>{
         LEFT JOIN exam_attempts ea ON ea.student_id=u.id AND ea.teacher_id=$1
         LEFT JOIN assignment_submissions s ON s.student_id=u.id AND s.teacher_id=$1
         WHERE u.role='STUDENT'
-        GROUP BY u.id,u.full_name,u.email,u.grade ORDER BY last_activity DESC NULLS LAST,u.full_name`,[id]);
-      res.json({ok:true,data:{students:rows,total_courses:(await pool.query(`SELECT COUNT(*)::int n FROM courses WHERE teacher_id=$1`,[id])).rows[0].n}});
+        GROUP BY u.id,u.full_name,u.email,u.grade ORDER BY last_activity DESC NULLS LAST,u.full_name`, [id]);
+      res.json({ ok: true, data: { students: rows, total_courses: (await pool.query(`SELECT COUNT(*)::int n FROM courses WHERE teacher_id=$1`, [id])).rows[0].n } });
       return;
     }
-    if(name==="getPublicTeacher") {
-      const slug=String(p.slug||"").trim().toLowerCase();
-      const profile=(await pool.query(`SELECT * FROM teacher_profiles WHERE LOWER(slug)=LOWER($1) LIMIT 1`,[slug])).rows[0];
-      if(!profile) return res.json({ok:true,data:{status:"not_found"}});
-      const teacher=(await pool.query(`SELECT id,full_name,email,photo_url,role FROM users WHERE id=$1`,[profile.teacher_id])).rows[0];
-      if(!teacher) return res.json({ok:true,data:{status:"not_ready"}});
-      const [courses,lessons,materials,exams,assignments,announcements]=await Promise.all([
-        pool.query(`SELECT * FROM courses WHERE teacher_id=$1 AND status='published' ORDER BY updated_at DESC`,[teacher.id]),
-        pool.query(`SELECT * FROM lessons WHERE teacher_id=$1 AND status='published' ORDER BY sort_order,created_at`,[teacher.id]),
-        pool.query(`SELECT * FROM materials WHERE teacher_id=$1 AND status='published' ORDER BY updated_date DESC`,[teacher.id]),
-        pool.query(`SELECT * FROM exams WHERE teacher_id=$1 AND status='published' ORDER BY updated_date DESC`,[teacher.id]),
-        pool.query(`SELECT * FROM assignments WHERE teacher_id=$1 AND status='published' ORDER BY updated_date DESC`,[teacher.id]),
-        pool.query(`SELECT * FROM announcements WHERE teacher_id=$1 AND status='published' ORDER BY date DESC`,[teacher.id])
+    if (name === "getPublicTeacher") {
+      const slug = String(p.slug || "").trim().toLowerCase();
+      const profile = (await pool.query(`SELECT * FROM teacher_profiles WHERE LOWER(slug)=LOWER($1) LIMIT 1`, [slug])).rows[0];
+      if (!profile) return res.json({ ok: true, data: { status: "not_found" } });
+      const teacher = (await pool.query(`SELECT id,full_name,email,photo_url,role FROM users WHERE id=$1`, [profile.teacher_id])).rows[0];
+      if (!teacher) return res.json({ ok: true, data: { status: "not_ready" } });
+      const [courses, lessons, materials, exams, assignments, announcements] = await Promise.all([
+        pool.query(`SELECT * FROM courses WHERE teacher_id=$1 AND status='published' ORDER BY updated_at DESC`, [teacher.id]),
+        pool.query(`SELECT * FROM lessons WHERE teacher_id=$1 AND status='published' ORDER BY sort_order,created_at`, [teacher.id]),
+        pool.query(`SELECT * FROM materials WHERE teacher_id=$1 AND status='published' ORDER BY updated_date DESC`, [teacher.id]),
+        pool.query(`SELECT * FROM exams WHERE teacher_id=$1 AND status='published' ORDER BY updated_date DESC`, [teacher.id]),
+        pool.query(`SELECT * FROM assignments WHERE teacher_id=$1 AND status='published' ORDER BY updated_date DESC`, [teacher.id]),
+        pool.query(`SELECT * FROM announcements WHERE teacher_id=$1 AND status='published' ORDER BY date DESC`, [teacher.id])
       ]);
-      res.json({ok:true,data:{status:"ok",teacher_id:teacher.id,teacher_name:profile.page_title||teacher.full_name||"المدرس",teacher:{...teacher,photoURL:teacher.photo_url},profile:normalizeRow("TeacherProfile",profile),courses:courses.rows.map(x=>normalizeRow("Course",x)),lessons:lessons.rows.map(x=>normalizeRow("Lesson",x)),materials:materials.rows.map(x=>normalizeRow("Material",x)),exams:exams.rows.map(x=>normalizeRow("Exam",x)),assignments:assignments.rows.map(x=>normalizeRow("Assignment",x)),announcements:announcements.rows.map(x=>normalizeRow("Announcement",x))}});
+      res.json({ ok: true, data: { status: "ok", teacher_id: teacher.id, teacher_name: profile.page_title || teacher.full_name || "المدرس", teacher: { ...teacher, photoURL: teacher.photo_url }, profile: normalizeRow("TeacherProfile", profile), courses: courses.rows.map(x => normalizeRow("Course", x)), lessons: lessons.rows.map(x => normalizeRow("Lesson", x)), materials: materials.rows.map(x => normalizeRow("Material", x)), exams: exams.rows.map(x => normalizeRow("Exam", x)), assignments: assignments.rows.map(x => normalizeRow("Assignment", x)), announcements: announcements.rows.map(x => normalizeRow("Announcement", x)) } });
       return;
     }
-    if(name==="trackMaterialDownload") {
-      if(!req.user) return res.status(401).json({ok:false,message:"يجب تسجيل الدخول قبل التحميل"});
-      const materialId=p.material_id||p.file_id; const m=(await pool.query(`SELECT id,teacher_id,course_id FROM materials WHERE id=$1`,[materialId])).rows[0];
-      if(!m) return res.status(404).json({ok:false,message:"الملف غير موجود"});
-      const existing=(await pool.query(`SELECT * FROM material_downloads WHERE material_id=$1 AND student_id=$2 LIMIT 1`,[m.id,req.user.id])).rows[0];
-      if(existing) return res.json({ok:true,data:normalizeRow("MaterialDownload",existing)});
-      const {rows}=await pool.query(`INSERT INTO material_downloads(student_id,teacher_id,course_id,file_id,material_id) VALUES($1,$2,$3,$4,$4) RETURNING *`,[req.user.id,m.teacher_id,m.course_id,m.id]);
-      return res.json({ok:true,data:normalizeRow("MaterialDownload",rows[0])});
+    if (name === "trackMaterialDownload") {
+      if (!req.user) return res.status(401).json({ ok: false, message: "يجب تسجيل الدخول قبل التحميل" });
+      const materialId = p.material_id || p.file_id; const m = (await pool.query(`SELECT id,teacher_id,course_id FROM materials WHERE id=$1`, [materialId])).rows[0];
+      if (!m) return res.status(404).json({ ok: false, message: "الملف غير موجود" });
+      const existing = (await pool.query(`SELECT * FROM material_downloads WHERE material_id=$1 AND student_id=$2 LIMIT 1`, [m.id, req.user.id])).rows[0];
+      if (existing) return res.json({ ok: true, data: normalizeRow("MaterialDownload", existing) });
+      const { rows } = await pool.query(`INSERT INTO material_downloads(student_id,teacher_id,course_id,file_id,material_id) VALUES($1,$2,$3,$4,$4) RETURNING *`, [req.user.id, m.teacher_id, m.course_id, m.id]);
+      return res.json({ ok: true, data: normalizeRow("MaterialDownload", rows[0]) });
     }
-    if(name==="trackLessonView") {
-      const lesson=(await pool.query(`SELECT id,teacher_id,course_id FROM lessons WHERE id=$1`,[p.lesson_id])).rows[0];
-      if(!lesson) return res.status(404).json({ok:false,message:"الدرس غير موجود"});
-      const pct=Math.max(0,Math.min(100,Number(p.completion_percentage)||0));
-      const {rows}=await pool.query(`INSERT INTO lesson_views(student_id,teacher_id,course_id,lesson_id,completion_percentage,watch_duration,last_watched_at,updated_at)
-        VALUES($1,$2,$3,$4,$5,$6,NOW(),NOW()) ON CONFLICT(student_id,lesson_id) DO UPDATE SET completion_percentage=GREATEST(lesson_views.completion_percentage,EXCLUDED.completion_percentage),watch_duration=GREATEST(lesson_views.watch_duration,EXCLUDED.watch_duration),last_watched_at=NOW(),updated_at=NOW() RETURNING *`,[req.user.id,lesson.teacher_id,lesson.course_id,lesson.id,pct,Math.max(0,Number(p.watch_duration)||0)]);
-      return res.json({ok:true,data:{success:true,view:normalizeRow("LessonView",rows[0])}});
+    if (name === "trackLessonView") {
+      const lesson = (await pool.query(`SELECT id,teacher_id,course_id FROM lessons WHERE id=$1`, [p.lesson_id])).rows[0];
+      if (!lesson) return res.status(404).json({ ok: false, message: "الدرس غير موجود" });
+      const pct = Math.max(0, Math.min(100, Number(p.completion_percentage) || 0));
+      const { rows } = await pool.query(`INSERT INTO lesson_views(student_id,teacher_id,course_id,lesson_id,completion_percentage,watch_duration,last_watched_at,updated_at)
+        VALUES($1,$2,$3,$4,$5,$6,NOW(),NOW()) ON CONFLICT(student_id,lesson_id) DO UPDATE SET completion_percentage=GREATEST(lesson_views.completion_percentage,EXCLUDED.completion_percentage),watch_duration=GREATEST(lesson_views.watch_duration,EXCLUDED.watch_duration),last_watched_at=NOW(),updated_at=NOW() RETURNING *`, [req.user.id, lesson.teacher_id, lesson.course_id, lesson.id, pct, Math.max(0, Number(p.watch_duration) || 0)]);
+      return res.json({ ok: true, data: { success: true, view: normalizeRow("LessonView", rows[0]) } });
     }
-    if(name==="gradeExamAttempt") {
-      if(req.user.role!=="TEACHER") return res.status(403).json({ok:false,message:"غير مصرح"});
-      const attempt=(await pool.query(`SELECT * FROM exam_attempts WHERE id=$1 AND teacher_id=$2`,[p.attempt_id,req.user.id])).rows[0];
-      if(!attempt) return res.status(404).json({ok:false,message:"محاولة الاختبار غير موجودة"});
-      const exam=(await pool.query(`SELECT * FROM exams WHERE id=$1 AND teacher_id=$2`,[attempt.exam_id,req.user.id])).rows[0];
-      if(!exam) return res.status(404).json({ok:false,message:"الاختبار غير موجود"});
-      const q=(await pool.query(`SELECT points FROM exam_questions WHERE exam_id=$1`,[exam.id])).rows;
-      const embedded=Array.isArray(exam.questions)?exam.questions:[];
-      const possible=q.length?q.reduce((s,x)=>s+Number(x.points||1),0):embedded.reduce((s,x)=>s+Number(x.points||1),0)||100;
-      const score=Math.max(0,Math.min(100,Number(p.score)||0));
-      const {rows}=await pool.query(`UPDATE exam_attempts SET score=$1,possible=$2,earned=$3,passed=$4,teacher_note=$5,status='graded',graded_at=NOW(),graded_by=$6,updated_date=NOW() WHERE id=$7 RETURNING *`,[score,possible,possible*score/100,score>=Number(exam.passing_score||50),String(p.teacher_note||""),req.user.id,attempt.id]);
-      return res.json({ok:true,data:normalizeRow("ExamAttempt",rows[0])});
+    if (name === "gradeExamAttempt") {
+      if (req.user.role !== "TEACHER") return res.status(403).json({ ok: false, message: "غير مصرح" });
+      const attempt = (await pool.query(`SELECT * FROM exam_attempts WHERE id=$1 AND teacher_id=$2`, [p.attempt_id, req.user.id])).rows[0];
+      if (!attempt) return res.status(404).json({ ok: false, message: "محاولة الاختبار غير موجودة" });
+      const exam = (await pool.query(`SELECT * FROM exams WHERE id=$1 AND teacher_id=$2`, [attempt.exam_id, req.user.id])).rows[0];
+      if (!exam) return res.status(404).json({ ok: false, message: "الاختبار غير موجود" });
+      const q = (await pool.query(`SELECT points FROM exam_questions WHERE exam_id=$1`, [exam.id])).rows;
+      const embedded = Array.isArray(exam.questions) ? exam.questions : [];
+      const possible = q.length ? q.reduce((s, x) => s + Number(x.points || 1), 0) : embedded.reduce((s, x) => s + Number(x.points || 1), 0) || 100;
+      const score = Math.max(0, Math.min(100, Number(p.score) || 0));
+      const { rows } = await pool.query(`UPDATE exam_attempts SET score=$1,possible=$2,earned=$3,passed=$4,teacher_note=$5,status='graded',graded_at=NOW(),graded_by=$6,updated_date=NOW() WHERE id=$7 RETURNING *`, [score, possible, possible * score / 100, score >= Number(exam.passing_score || 50), String(p.teacher_note || ""), req.user.id, attempt.id]);
+      return res.json({ ok: true, data: normalizeRow("ExamAttempt", rows[0]) });
     }
-    if(name==="startExamAttempt") {
-      const exam=(await pool.query(`SELECT * FROM exams WHERE id=$1`,[p.exam_id])).rows[0];
-      if(!exam) return res.status(404).json({ok:false,message:"الاختبار غير موجود"});
-      if(exam.status!=="published" && exam.teacher_id!==req.user.id) return res.status(403).json({ok:false,message:"لا يمكنك دخول هذا الاختبار"});
-      const existing=(await pool.query(`SELECT * FROM exam_attempts WHERE exam_id=$1 AND student_id=$2 AND status IN ('in_progress','pending_grading') ORDER BY created_date DESC LIMIT 1`,[exam.id,req.user.id])).rows[0];
-      if(existing) return res.json({ok:true,data:normalizeRow("ExamAttempt",existing)});
-      const {rows}=await pool.query(`INSERT INTO exam_attempts(student_id,teacher_id,course_id,exam_id,student_name,status) VALUES($1,$2,$3,$4,$5,'in_progress') RETURNING *`,[req.user.id,exam.teacher_id,exam.course_id,exam.id,req.user.full_name||req.user.email]);
-      return res.json({ok:true,data:normalizeRow("ExamAttempt",rows[0])});
+    if (name === "startExamAttempt") {
+      const exam = (await pool.query(`SELECT * FROM exams WHERE id=$1`, [p.exam_id])).rows[0];
+      if (!exam) return res.status(404).json({ ok: false, message: "الاختبار غير موجود" });
+      if (exam.status !== "published" && exam.teacher_id !== req.user.id) return res.status(403).json({ ok: false, message: "لا يمكنك دخول هذا الاختبار" });
+      const existing = (await pool.query(`SELECT * FROM exam_attempts WHERE exam_id=$1 AND student_id=$2 AND status IN ('in_progress','pending_grading') ORDER BY created_date DESC LIMIT 1`, [exam.id, req.user.id])).rows[0];
+      if (existing) return res.json({ ok: true, data: normalizeRow("ExamAttempt", existing) });
+      const { rows } = await pool.query(`INSERT INTO exam_attempts(student_id,teacher_id,course_id,exam_id,student_name,status) VALUES($1,$2,$3,$4,$5,'in_progress') RETURNING *`, [req.user.id, exam.teacher_id, exam.course_id, exam.id, req.user.full_name || req.user.email]);
+      return res.json({ ok: true, data: normalizeRow("ExamAttempt", rows[0]) });
     }
-    if(name==="submitExamAttempt") {
-      const attempt=(await pool.query(`SELECT * FROM exam_attempts WHERE exam_id=$1 AND student_id=$2 AND status='in_progress' ORDER BY created_date DESC LIMIT 1`,[p.exam_id,req.user.id])).rows[0];
-      if(!attempt) return res.status(404).json({ok:false,message:"محاولة الاختبار غير موجودة"});
-      const {rows}=await pool.query(`UPDATE exam_attempts SET answers=$1,status='pending_grading',submitted_at=NOW(),submitted_reason=$2,updated_date=NOW() WHERE id=$3 RETURNING *`,[JSON.stringify(p.answers||{}),String(p.reason||"student"),attempt.id]);
-      return res.json({ok:true,data:normalizeRow("ExamAttempt",rows[0])});
+    if (name === "submitExamAttempt") {
+      const attempt = (await pool.query(`SELECT * FROM exam_attempts WHERE exam_id=$1 AND student_id=$2 AND status='in_progress' ORDER BY created_date DESC LIMIT 1`, [p.exam_id, req.user.id])).rows[0];
+      if (!attempt) return res.status(404).json({ ok: false, message: "محاولة الاختبار غير موجودة" });
+      const { rows } = await pool.query(`UPDATE exam_attempts SET answers=$1,status='pending_grading',submitted_at=NOW(),submitted_reason=$2,updated_date=NOW() WHERE id=$3 RETURNING *`, [JSON.stringify(p.answers || {}), String(p.reason || "student"), attempt.id]);
+      return res.json({ ok: true, data: normalizeRow("ExamAttempt", rows[0]) });
     }
-    return res.status(404).json({ok:false,message:`الوظيفة "${name}" غير مدعومة`});
-  } catch(err) { routeError(res,err,`Function ${name}:`); }
+    return res.status(404).json({ ok: false, message: `الوظيفة "${name}" غير مدعومة` });
+  } catch (err) { routeError(res, err, `Function ${name}:`); }
 });
 
-app.use("/api",(req,res)=>res.status(404).json({ok:false,message:"API endpoint غير موجود"}));
+app.use("/api", (req, res) => res.status(404).json({ ok: false, message: "API endpoint غير موجود" }));
 
-async function startServer(){
+async function startServer() {
   try {
     await pool.query("SELECT 1");
     await ensureSchema();
-    const server = app.listen(PORT, HOST, ()=>{
+    const server = app.listen(PORT, HOST, () => {
       console.log(`Lurnova Backend running on http://${HOST}:${PORT}`);
       console.log(`Frontend: ${FRONTEND_URL}`);
       console.log(`Teacher account: ${TEACHER_EMAIL}`);
@@ -1126,12 +1127,12 @@ async function startServer(){
     // Large video uploads must not be killed by Node's default 5-minute request timeout.
     server.requestTimeout = 0;
     server.headersTimeout = 120000;
-  } catch(err) {
-    console.error("Startup error:",err);
-    await pool.end().catch(()=>{});
+  } catch (err) {
+    console.error("Startup error:", err);
+    await pool.end().catch(() => { });
     process.exit(1);
   }
 }
-process.on("SIGINT",async()=>{await pool.end();process.exit(0);});
-process.on("SIGTERM",async()=>{await pool.end();process.exit(0);});
+process.on("SIGINT", async () => { await pool.end(); process.exit(0); });
+process.on("SIGTERM", async () => { await pool.end(); process.exit(0); });
 startServer();
