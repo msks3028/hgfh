@@ -1,0 +1,22 @@
+Lurnova - requested updates in this build
+
+1) Teacher course cards:
+   - "إدارة الكورس" is now clickable.
+   - Opens a dedicated course management page showing videos/lessons, exams,
+     assignments, files/materials, announcements, and course sections.
+   - Each content area has an "إضافة" shortcut with the course preselected.
+
+2) Student Google login:
+   - A student without a saved grade is sent to "اختر صفك الدراسي" before
+     entering student content.
+   - The selected grade is saved in PostgreSQL and reused on future logins.
+   - Teacher Google login is not blocked by grade selection.
+   - Existing grade-based filtering of courses/videos/files/exams/assignments
+     remains in place.
+
+3) Existing course persistence and backend behavior were preserved.
+
+Important:
+- node_modules is intentionally NOT included in this ZIP. Run `npm install`
+  in the project root before `npm run dev`; this avoids carrying a broken
+  Windows Rollup optional dependency inside the ZIP.

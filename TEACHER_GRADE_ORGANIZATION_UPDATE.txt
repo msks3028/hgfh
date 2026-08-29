@@ -1,0 +1,22 @@
+Lurnova - Teacher Grade Organization Update
+
+This version keeps the stable previous build and adds teacher-side organization by school grade.
+
+Grades supported:
+- الصف الأول الابتدائي through الصف السادس الابتدائي
+- الصف الأول الإعدادي through الصف الثالث الإعدادي
+- الصف الأول الثانوي through الصف الثالث الثانوي
+
+Teacher dashboard sections updated:
+- الصفوف والكورسات: choose a grade to show only that grade's courses.
+- الحصص المسجلة: grade filter; content inherits the course grade when its own target_grade is empty.
+- مشاهدات الفيديوهات: grade filter and grade-specific counters.
+- الاختبارات: grade filter.
+- الواجبات: grade filter.
+- الإعلانات: grade filter when linked to a course.
+- الملفات والملازم: grade filter.
+- الإحصائيات: grade filter with PostgreSQL-backed statistics for the selected grade.
+
+The selected teacher grade is stored locally so moving between teacher sections keeps the same grade selection.
+
+No node_modules folder is included in the ZIP. Run npm install once after extraction, then npm run dev.

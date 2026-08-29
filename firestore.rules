@@ -1,0 +1,76 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    // المشروع الحالي يعتمد على حساب المدرس الرئيسي.
+    function teacher() {
+      return signedIn() &&
+        request.auth.token.email == 'mostafakareem978@gmail.com';
+    }
+    function ownerCreate(field) {
+      return signedIn() && request.resource.data[field] == request.auth.uid;
+    }
+    function ownerExisting(field) {
+      return signedIn() && resource.data[field] == request.auth.uid;
+    }
+
+    // بيانات الحساب
+    match /education/User/items/{id} {
+      allow read: if signedIn();
+      allow create, update: if signedIn() && request.auth.uid == id;
+      allow delete: if signedIn() && request.auth.uid == id;
+    }
+
+    // محتوى يمكن للطلاب قراءته
+    match /education/Course/items/{id} { allow read: if signedIn(); allow write: if teacher(); }
+    match /education/CourseSection/items/{id} { allow read: if signedIn(); allow write: if teacher(); }
+    match /education/Lesson/items/{id} { allow read: if signedIn(); allow write: if teacher(); }
+    match /education/Material/items/{id} { allow read: if signedIn(); allow write: if teacher(); }
+    match /education/Announcement/items/{id} { allow read: if signedIn(); allow write: if teacher(); }
+    match /education/Exam/items/{id} { allow read: if signedIn(); allow write: if teacher(); }
+    match /education/ExamQuestion/items/{id} { allow read: if signedIn(); allow write: if teacher(); }
+    match /education/Assignment/items/{id} { allow read: if signedIn(); allow write: if teacher(); }
+    match /education/TeacherLink/items/{id} { allow read: if signedIn(); allow write: if teacher(); }
+    match /education/TeacherProfile/items/{id} { allow read: if signedIn(); allow write: if teacher(); }
+    match /education/ProblemReport/items/{id} {
+      allow read: if teacher();
+      allow create: if signedIn();
+      allow update, delete: if teacher();
+    }
+
+    // اشتراكات الطلاب
+    match /education/Enrollment/items/{id} {
+      allow read: if teacher() || (signedIn() && resource.data.student_id == request.auth.uid);
+      allow create: if teacher() || ownerCreate('student_id');
+      allow update, delete: if teacher() || ownerExisting('student_id');
+    }
+
+    // نشاط الطالب الخاص
+    match /education/LessonView/items/{id} {
+      allow read: if teacher() || (signedIn() && resource.data.student_id == request.auth.uid);
+      allow create: if ownerCreate('student_id');
+      allow update, delete: if teacher() || ownerExisting('student_id');
+    }
+    match /education/MaterialDownload/items/{id} {
+      allow read: if teacher() || (signedIn() && resource.data.student_id == request.auth.uid);
+      allow create: if ownerCreate('student_id');
+      allow update, delete: if teacher() || ownerExisting('student_id');
+    }
+    match /education/ExamAttempt/items/{id} {
+      allow read: if teacher() || (signedIn() && resource.data.student_id == request.auth.uid);
+      allow create: if ownerCreate('student_id');
+      allow update, delete: if teacher() || ownerExisting('student_id');
+    }
+    match /education/AssignmentSubmission/items/{id} {
+      allow read: if teacher() || (signedIn() && resource.data.student_id == request.auth.uid);
+      allow create: if ownerCreate('student_id');
+      allow update, delete: if teacher() || ownerExisting('student_id');
+    }
+
+    // تقييم المدرس: المدرس فقط يكتب، والطالب المعني فقط يقرأ.
+    match /education/TeacherEvaluation/items/{id} {
+      allow read: if teacher() || (signedIn() && resource.data.student_id == request.auth.uid);
+      allow create, update, delete: if teacher();
+    }
+  }
+}

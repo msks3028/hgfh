@@ -1,0 +1,4 @@
+Google OAuth: server/index.js, src/api/apiClient.js, src/pages/Login.jsx, GOOGLE_LOGIN_SETUP.md
+Course persistence/display: src/pages/teacher/TeacherCourses.jsx, src/lib/useTeacherCourses.jsx
+Exam persistence/display: src/pages/teacher/TeacherExams.jsx
+Image uploads: server/index.js + existing FileUpload.jsx (unique server-side filenames allow repeated uploads)
